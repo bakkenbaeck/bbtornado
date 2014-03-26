@@ -1,6 +1,7 @@
 import os
 import tornado.web
 
+from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.orm import scoped_session
 
 def authenticated(error_code=401, error_message="Not Found"):
@@ -35,6 +36,14 @@ class BaseHandler(tornado.web.RequestHandler):
         if self.application.user_model is not None and isinstance(value, self.application.user_model):
             value = value.id
         self.set_secure_cookie('user_id', unicode(value))
+
+    @property
+    def executor(self):
+        return self.get_executor()
+
+    _default_executor = ThreadPoolExecutor(10)
+    def get_executor(self):
+        return self._default_executor
 
 class SingleFileHandler(tornado.web.StaticFileHandler):
     def initialize(self,filename):
