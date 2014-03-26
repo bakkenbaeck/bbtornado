@@ -24,6 +24,10 @@ class BaseHandler(tornado.web.RequestHandler):
             self._session = scoped_session(self.application.Session)
         return self._session
 
+    def on_finish(self):
+        if self._session:
+            self._session.remove()
+
     def get_current_user(self):
         user_id = self.get_secure_cookie('user_id')
         if self.application.user_model is not None:
