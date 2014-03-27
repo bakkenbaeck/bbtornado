@@ -25,7 +25,7 @@ class BaseHandler(tornado.web.RequestHandler):
         return self._session
 
     def on_finish(self):
-        if self._session:
+        if hasattr(self, '_session'):
             self._session.remove()
 
     def get_current_user(self):
