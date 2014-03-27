@@ -2,8 +2,10 @@ import tornado.options
 import tornado.web
 
 import bbtornado.models
+
 try:
     import settings as app_settings
+    if hasattr(app_settings, 'settings'): app_settings = app_settings.settings
 except:
     import default_settings as app_settings
 

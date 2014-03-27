@@ -4,6 +4,8 @@ import tornado.options
 import tornado.log
 try:
     import settings
+    if hasattr(settings, 'settings'): settings = settings.settings
+
 except:
     import default_settings as settings
 
