@@ -1,8 +1,10 @@
 import os
 import tornado.web
+import traceback
 
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.orm import scoped_session
+from tornado.escape import json_decode
 
 def authenticated(error_code=401, error_message="Not Found"):
     """Decorate methods with this to require that the user be logged in.
@@ -12,7 +14,7 @@ def authenticated(error_code=401, error_message="Not Found"):
         @functools.wraps(method)
         def wrapper(self, *args, **kwargs):
             if not self.current_user:
-                raise tornado.web.HTTPError(error_code, log_message=error_message)
+                raise tornado.web.HTTPError(error_code, reason=error_message)
             return method(self, *args, **kwargs)
         return wrapper
     return decorator
@@ -48,6 +50,27 @@ class BaseHandler(tornado.web.RequestHandler):
     _default_executor = ThreadPoolExecutor(10)
     def get_executor(self):
         return self._default_executor
+
+    def prepare(self):
+        """Puts any json data into self.request.arguments"""
+        if any(('application/json' in x for x in self.request.headers.get_list('Content-Type'))):
+            try:
+                json_data = json_decode(self.request.body)
+            except ValueError:
+                raise tornado.web.HTTPError(500, reason="Invalid JSON structure.")
+            if type(json_data) != dict:
+                raise tornado.web.HTTPError(500, reason="We only accept key value objects!")
+            for key, value in json_data.iteritems():
+                self.request.arguments[key] = [value,]
+
+class JSONWriteErrorMixin(object):
+    def write_error(self, status_code, **kwargs):
+        rval = dict(code=status_code, message=self._reason)
+        # only give exc_info when in debug mode
+        if self.settings.get("serve_traceback") and "exc_info" in kwargs:
+            rval['exc_info'] = traceback.format_exception(*kwargs["exc_info"])
+        self.write(rval)
+        self.finish()
 
 class SingleFileHandler(tornado.web.StaticFileHandler):
     def initialize(self,filename):
