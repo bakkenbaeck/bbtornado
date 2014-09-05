@@ -3,3 +3,6 @@ env
 sample
 sample-env
 *.pyc
+
+/build
+/dist
