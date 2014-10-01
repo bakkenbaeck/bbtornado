@@ -60,8 +60,20 @@ class BaseHandler(tornado.web.RequestHandler):
                 raise tornado.web.HTTPError(500, reason="Invalid JSON structure.")
             if type(json_data) != dict:
                 raise tornado.web.HTTPError(500, reason="We only accept key value objects!")
-            for key, value in json_data.iteritems():
-                self.request.arguments[key] = [value,]
+            self.json_data = json_data
+
+    def _get_arguments(self, name, source, strip=True):
+        """Override _get_arguments to also look-up json args"""
+        values = tornado.web.RequestHandler._get_arguments(self, name, source, strip)
+
+        if not values and hasattr(self, 'json_data') and name in self.json_data:
+            values = self.json_data[name]
+            if not isinstance(values, list):
+                values = [values]
+
+        return values
+
+
 
 class JSONWriteErrorMixin(object):
     def write_error(self, status_code, **kwargs):
