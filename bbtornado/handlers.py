@@ -2,16 +2,21 @@ import os
 import tornado.web
 import traceback
 
+
+from functools import wraps
+
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.orm import scoped_session
 from tornado.escape import json_decode
+from tornado.web import HTTPError
+
 
 def authenticated(error_code=401, error_message="Not Found"):
     """Decorate methods with this to require that the user be logged in.
     If the user is not logged in, error_code will be set and error_message returned
     """
     def decorator(method):
-        @functools.wraps(method)
+        @wraps(method)
         def wrapper(self, *args, **kwargs):
             if not self.current_user:
                 raise tornado.web.HTTPError(error_code, reason=error_message)
@@ -90,3 +95,22 @@ class SingleFileHandler(tornado.web.StaticFileHandler):
         return super(SingleFileHandler, self).initialize(path)
     def get(self, *args, **kwargs):
         return super(SingleFileHandler, self).get(self.filename)
+
+def json_requires(*fields):
+
+    def wrapper1(func):
+        @wraps(func)
+        def wrapper2(self, *args, **kwargs):
+
+            if not hasattr(self, 'json_data'):
+                raise HTTPError(400, "JSON Body required - check your body + headers")
+
+            for f in fields:
+                if f not in self.json_data: raise HTTPError(400, "Required field '%s' is missing."%(f,))
+
+            return func(self, *args, **kwargs)
+
+        return wrapper2
+
+
+    return wrapper1

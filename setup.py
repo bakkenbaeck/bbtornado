@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='BBTornado',
-    version='0.0.3',
+    version='0.0.4',
     author='Tristan King',
     author_email='tristan.king@gmail.com',
     packages=['bbtornado'],
