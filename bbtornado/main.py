@@ -15,9 +15,10 @@ def setup():
     tornado.options.define("base", default=settings.BASE_URL, type=str)
     tornado.options.define("debug", default=settings.DEBUG, type=bool)
     tornado.options.define("db_path", default=settings.SQLALCHEMY_DATABASE_URI, type=str)
+    tornado.options.parse_command_line()
+
 
 def main(app):
-    tornado.options.parse_command_line()
     http_server = tornado.httpserver.HTTPServer(app)
     http_server.listen(tornado.options.options.port, address=tornado.options.options.host)
     tornado.log.gen_log.info('HTTP Server started on http://%s:%s/%s',
