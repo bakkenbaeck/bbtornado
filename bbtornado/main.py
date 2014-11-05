@@ -31,10 +31,15 @@ def main(app):
         tornado.ioloop.IOLoop.instance().start()
 
     else:
+
+        from tornado.wsgi import WSGIAdapter
+
+        wsgi_app = WSGIAdapter(app)
+
         def fcgiapp(env, start):
             # set the script name to "" so it does not appear in the tonado path match pattern
             env['SCRIPT_NAME'] = ''
-            return app(env, start)
+            return wsgi_app(env, start)
 
         from flup.server.fcgi import WSGIServer
         WSGIServer(fcgiapp, bindAddress=tornado.options.options.fcgi).run()
