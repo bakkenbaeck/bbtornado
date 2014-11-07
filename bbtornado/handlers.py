@@ -34,6 +34,7 @@ class BaseHandler(tornado.web.RequestHandler):
     def on_finish(self):
         if hasattr(self, '_session') and self._session:
             self._session.remove()
+            del self._session
 
     def get_current_user(self):
         user_id = self.get_secure_cookie('user_id')
