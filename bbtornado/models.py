@@ -4,6 +4,7 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from sqlalchemy.orm.query import Query
+from sqlalchemy.orm.session import Session
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -27,6 +28,11 @@ def _to_json(o, *args, **kwargs):
     return o
 
 class BaseModel(object):
+
+    @property
+    def session(self):
+        return Session.object_session(self)
+
 
     def _to_json(self, private=False, extra_fields=[]):
 
