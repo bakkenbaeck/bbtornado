@@ -13,7 +13,7 @@ def setup():
     tornado.options.define("host", default="0.0.0.0", help="run on the given address", type=str)
     tornado.options.define("port", default=5000, help="run on the given port", type=int)
     tornado.options.define("base", default=settings.BASE_URL, type=str)
-    tornado.options.define("debug", default=settings.DEBUG, type=bool)
+    tornado.options.define("debug", default=settings.DEBUG, type=int)
     tornado.options.define("fcgi", default=None, type=str)
     tornado.options.define("db_path", default=settings.SQLALCHEMY_DATABASE_URI, type=str)
     tornado.options.parse_command_line()
