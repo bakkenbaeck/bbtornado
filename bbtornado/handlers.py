@@ -11,7 +11,7 @@ from tornado.escape import json_decode
 from tornado.web import HTTPError
 
 
-def authenticated(error_code=401, error_message="Not Found"):
+def authenticated(error_code=403, error_message="Not Found"):
     """Decorate methods with this to require that the user be logged in.
     If the user is not logged in, error_code will be set and error_message returned
     """
