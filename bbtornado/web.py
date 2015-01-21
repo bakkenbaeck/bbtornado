@@ -13,7 +13,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 class Application(tornado.web.Application):
-    def __init__(self, handlers=None, default_host='', transforms=None, wsgi=False, user_model=None, **settings):
+    def __init__(self, handlers=None, default_host='', transforms=None, wsgi=False, user_model=None,
+                 autocommit=False, autoflush=True, **settings):
         if handlers: # append base url to handlers
             handlers = [(tornado.options.options.base + x[0],) + x[1:] for x in handlers]
         if not settings.has_key('debug'):
@@ -28,6 +29,6 @@ class Application(tornado.web.Application):
                                     # set echo to true if debug option is set to 2
                                     echo=tornado.options.options.debug == 2)
         bbtornado.models.init_db(self.engine)
-        self.Session = sessionmaker(bind=self.engine)
+        self.Session = sessionmaker(bind=self.engine, autocommit=autocommit, autoflush=autoflush)
         # this allows the BaseHandler to get and set a model for self.current_user
         self.user_model = user_model
