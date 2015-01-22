@@ -16,7 +16,7 @@ def setup():
     tornado.options.define("debug", default=settings.DEBUG, type=int)
     tornado.options.define("fcgi", default=None, type=str)
     tornado.options.define("db_path", default=settings.SQLALCHEMY_DATABASE_URI, type=str)
-    tornado.options.parse_command_line()
+    return tornado.options.parse_command_line()
 
 
 def main(app):
