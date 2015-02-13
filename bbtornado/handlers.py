@@ -21,6 +21,7 @@ def authenticated(error_code=403, error_message="Not Found"):
             if not self.current_user:
                 raise tornado.web.HTTPError(error_code, reason=error_message)
             return method(self, *args, **kwargs)
+        wrapper._needs_authentication = True
         return wrapper
     return decorator
 
