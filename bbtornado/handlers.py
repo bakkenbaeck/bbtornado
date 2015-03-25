@@ -1,14 +1,15 @@
 import os
 import tornado.web
 import traceback
+import threading
 
-
-from functools import wraps
+from functools import wraps, partial
 
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.orm import scoped_session
 from tornado.escape import json_decode
 from tornado.web import HTTPError
+from tornado.util import ObjectDict
 
 
 def authenticated(error_code=403, error_message="Not Found"):
@@ -25,7 +26,49 @@ def authenticated(error_code=403, error_message="Not Found"):
         return wrapper
     return decorator
 
+class ThreadRequestContext(object):
+    """A context manager that saves some per-thread state globally.
+    Intended for use with Tornado's StackContext.
+
+    Provide arbitrary data as kwargs upon creation,
+    then use ThreadRequestContext.data to access it.
+    """
+
+    _state = threading.local()
+    _state.data = {}
+
+    class __metaclass__(type):
+        # property() doesn't work on classmethods,
+        #  see http://stackoverflow.com/q/128573/1231454
+        @property
+        def data(cls):
+            if not hasattr(cls._state, 'data'):
+               return {}
+            return cls._state.data
+
+    def __init__(self, **data):
+        self._data = ObjectDict(data)
+
+    def __enter__(self):
+        self._prev_data = self.__class__.data
+        self.__class__._state.data = self._data
+
+    def __exit__(self, *exc):
+        self.__class__._state.data = self._prev_data
+        del self._prev_data
+        return False
+
 class BaseHandler(tornado.web.RequestHandler):
+
+    def _execute(self, transforms, *args, **kwargs):
+        """
+        Override this to save some data in a StackContact local dict
+        """
+        global_data = dict(request=self.request, current_user=self.current_user)
+
+        with tornado.stack_context.StackContext(partial(ThreadRequestContext, **global_data)):
+            return super(BaseHandler, self)._execute(transforms, *args, **kwargs)
+
     @property
     def db(self):
         if not hasattr(self, '_session'):
