@@ -28,7 +28,7 @@ class Application(tornado.web.Application):
         super(Application, self).__init__(handlers=handlers, default_host=default_host,
                                           transforms=transforms, wsgi=wsgi, **settings)
 
-        log.info('Creating database from %s'%tornado.options.options.db_path)
+        log.info('Using database from %s'%tornado.options.options.db_path)
         # setup database
         self.engine = create_engine(tornado.options.options.db_path,
                                     convert_unicode=True,
