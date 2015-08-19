@@ -46,9 +46,13 @@ class BaseModel(object):
         * [ 'users' ] will include the `users` field
         * [ 'users', 'users.team' ] will include the `users` field, and the `team` field for each user
         * [ 'users', 'users.!password' ] will include the `users` field, but NOT the password field for each user
+        * [ 'users', 'users.^id' ] will include ONLY the id field of each user.
 
+        extra_fields will also show private fields, hidden fields are never shown.
 
-        extra_fields will also show private fields, hidden fields are never shown
+        If you specify a single ^/only field for sub-thing and it's a list, the list will only be that
+        field value, not an object, i.e. `users.^id` will give you a list of just user IDs
+
         """
 
         fields = { p.key for p in sqlalchemy.orm.object_mapper(self).iterate_properties }
@@ -56,16 +60,30 @@ class BaseModel(object):
         if not private:
             fields.difference_update( self._json_fields_private )
 
-        fields.update(f for f in extra_fields if '.' not in f and f[0]!='!')
+        fields.update(f for f in extra_fields if '.' not in f and f[0] not in ('!^'))
         fields.difference_update( f[1:] for f in extra_fields if f.startswith('!') )
 
         fields.difference_update( self._json_fields_hidden )
 
+        only_fields = [ f[1:] for f in extra_fields if f.startswith('^') ]
+        if only_fields:
+            fields.intersection_update(only_fields)
+
         rval = {}
         for k in fields:
-            rval[k] = _to_json(getattr(self, k),
-                               private=private,
-                               extra_fields={ f[f.index('.')+1:] for f in extra_fields if '.' in f and f.startswith(k) } )
+
+            next_fields = { f[f.index('.')+1:] for f in extra_fields if '.' in f and f.startswith(k) }
+            only_fields = [ f for f in next_fields if f.startswith('^') ]
+
+            val = getattr(self, k)
+
+            if len(only_fields) == 1 and isinstance(val, (list, tuple)):
+                rval[k] = [ getattr(v, only_fields[0][1:]) for v in val ]
+            else:
+
+                rval[k] = _to_json(val,
+                                   private=private,
+                                   extra_fields=next_fields )
         return rval
 
     _json_fields_public = []
