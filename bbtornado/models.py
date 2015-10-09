@@ -23,8 +23,14 @@ def _to_json(o, *args, **kwargs):
         o = o._to_json(*args, **kwargs)
     elif isinstance(o, Decimal):
         o = float(o)
-    elif isinstance(o, (date, datetime,)):
+    elif isinstance(o, datetime):
+        if not o.tzinfo:
+            o = o.isoformat()+'Z'
+        else:
+            o = o.isoformat()
+    elif isinstance(o, date):
         o = o.isoformat()
+
     return o
 
 class BaseModel(object):
