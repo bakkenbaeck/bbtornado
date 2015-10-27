@@ -2,6 +2,7 @@ import os
 import tornado.web
 import traceback
 import threading
+import logging
 
 from functools import wraps, partial
 
@@ -11,6 +12,7 @@ from tornado.escape import json_decode
 from tornado.web import HTTPError
 from tornado.util import ObjectDict
 
+log = logging.getLogger('bbtornado')
 
 def authenticated(error_code=403, error_message="Not Found"):
     """Decorate methods with this to require that the user be logged in.
@@ -82,10 +84,14 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def get_current_user(self):
         user_id = self.get_secure_cookie('user_id')
-        if self.application.user_model is not None:
-            return self.db.query(self.application.user_model).get(int(user_id)) if user_id else None
-        else:
-            return int(user_id) if user_id else None
+        try:
+            if self.application.user_model is not None:
+                return self.db.query(self.application.user_model).get(int(user_id)) if user_id else None
+            else:
+                return int(user_id) if user_id else None
+        except:
+            log.exception('Exception while trying to get current user')
+            return None
 
     @tornado.web.RequestHandler.current_user.setter
     def current_user(self, value):
