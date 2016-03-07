@@ -1,7 +1,16 @@
+import logging
+import time
+import signal
+
 import tornado.ioloop
 import tornado.httpserver
 import tornado.options
 import tornado.log
+
+log = logging.getLogger(__name__)
+
+http_server = None
+
 try:
     import settings
     if hasattr(settings, 'settings'): settings = settings.settings
@@ -18,8 +27,38 @@ def setup():
     tornado.options.define("db_path", default=settings.SQLALCHEMY_DATABASE_URI, type=str)
     return tornado.options.parse_command_line()
 
+MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 3
+
+def sig_handler(sig, frame):
+    log.warning('Caught signal: %s', sig)
+    tornado.ioloop.IOLoop.instance().add_callback_from_signal(shutdown)
+
+def shutdown():
+    log.info('Stopping http server')
+    http_server.stop()
+
+    if hasattr(http_server.request_callback, 'shutdown_hook'):
+        http_server.request_callback.shutdown_hook()
+
+    log.info('Will shutdown in %s seconds ...', MAX_WAIT_SECONDS_BEFORE_SHUTDOWN)
+    io_loop = tornado.ioloop.IOLoop.instance()
+
+    deadline = time.time() + MAX_WAIT_SECONDS_BEFORE_SHUTDOWN
+
+    def stop_loop():
+        now = time.time()
+        if now < deadline and (io_loop._callbacks or io_loop._timeouts):
+            io_loop.add_timeout(now + 1, stop_loop)
+        else:
+            io_loop.stop()
+            log.info('Shutdown')
+    stop_loop()
+
+
 
 def main(app):
+
+    global http_server
 
     if not tornado.options.options.fcgi:
 
@@ -28,7 +67,17 @@ def main(app):
         tornado.log.gen_log.info('HTTP Server started on http://%s:%s/%s',
                                  tornado.options.options.host, tornado.options.options.port,
                                  tornado.options.options.base)
-        tornado.ioloop.IOLoop.instance().start()
+
+        signal.signal(signal.SIGTERM, sig_handler)
+        signal.signal(signal.SIGINT, sig_handler)
+
+        try:
+            tornado.ioloop.IOLoop.instance().start()
+        except KeyboardInterrupt:
+            if hasattr(app, 'shutdown_hook'):
+                app.shutdown_hook()
+            raise
+
 
     else:
 
