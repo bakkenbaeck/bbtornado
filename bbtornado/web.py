@@ -21,9 +21,9 @@ class Application(tornado.web.Application):
                  sessionmaker_settings={}, **settings):
         if handlers: # append base url to handlers
             handlers = [(tornado.options.options.base + x[0],) + x[1:] for x in handlers]
-        if not settings.has_key('debug'):
+        if 'debug' not in settings:
             settings['debug'] = tornado.options.options.debug
-        if not settings.has_key('cookie_secret'):
+        if 'cookie_secret' not in settings:
             settings['cookie_secret'] = app_settings.SECRET_KEY
         super(Application, self).__init__(handlers=handlers, default_host=default_host,
                                           transforms=transforms, wsgi=wsgi, **settings)

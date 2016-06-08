@@ -12,6 +12,10 @@ from tornado.escape import json_decode
 from tornado.web import HTTPError
 from tornado.util import ObjectDict
 
+
+from six import with_metaclass
+
+
 log = logging.getLogger('bbtornado')
 
 def authenticated(error_code=403, error_message="Not Found"):
@@ -28,7 +32,19 @@ def authenticated(error_code=403, error_message="Not Found"):
         return wrapper
     return decorator
 
-class ThreadRequestContext(object):
+
+
+class ThreadRequestContextMeta(type):
+    # property() doesn't work on classmethods,
+    #  see http://stackoverflow.com/q/128573/1231454
+    @property
+    def data(cls):
+        if not hasattr(cls._state, 'data'):
+           return ObjectDict()
+        return cls._state.data
+
+
+class ThreadRequestContext(with_metaclass(ThreadRequestContextMeta)):
     """A context manager that saves some per-thread state globally.
     Intended for use with Tornado's StackContext.
 
@@ -38,15 +54,6 @@ class ThreadRequestContext(object):
 
     _state = threading.local()
     _state.data = {}
-
-    class __metaclass__(type):
-        # property() doesn't work on classmethods,
-        #  see http://stackoverflow.com/q/128573/1231454
-        @property
-        def data(cls):
-            if not hasattr(cls._state, 'data'):
-               return {}
-            return cls._state.data
 
     def __init__(self, **data):
         self._data = ObjectDict(data)
