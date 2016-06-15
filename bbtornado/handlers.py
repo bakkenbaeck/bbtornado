@@ -172,3 +172,19 @@ def json_requires(*fields):
 
 
     return wrapper1
+
+
+class FallbackStaticFileHandler(tornado.web.StaticFileHandler):
+
+    def initialize(self, path=None, filename=None):
+
+        self.filename = filename
+        return tornado.web.StaticFileHandler.initialize(self, path=path)
+
+    def write_error(self, status_code=500, **kwargs):
+        if status_code == 404:
+            return self.get(self.filename)
+        elif status_code == 403 and 'is not a file' in kwargs['exc_info'][1].log_message:
+            return self.get(self.filename)
+        else:
+            tornado.web.StaticFileHandler.write_error(self, status_code, **kwargs)
