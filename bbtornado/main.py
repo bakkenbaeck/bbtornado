@@ -16,7 +16,8 @@ try:
     if hasattr(settings, 'settings'): settings = settings.settings
 
 except:
-    import default_settings as settings
+    log.warning("Using bbtornado default settings!")
+    import bbtornado.default_settings as settings
 
 def setup():
     tornado.options.define("host", default="0.0.0.0", help="run on the given address", type=str)
