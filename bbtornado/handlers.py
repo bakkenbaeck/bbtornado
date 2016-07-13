@@ -104,7 +104,7 @@ class BaseHandler(tornado.web.RequestHandler):
     def current_user(self, value):
         if self.application.user_model is not None and isinstance(value, self.application.user_model):
             value = value.id
-        self.set_secure_cookie('user_id', unicode(value))
+        self.set_secure_cookie('user_id', str(value))
 
     @property
     def executor(self):
