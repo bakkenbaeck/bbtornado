@@ -17,7 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 class Application(tornado.web.Application):
-    def __init__(self, handlers=None, default_host='', transforms=None, wsgi=False, user_model=None,
+    def __init__(self, handlers=None, default_host='', transforms=None, wsgi=False, user_model=None, domain=None,
                  sessionmaker_settings={}, **settings):
         if handlers: # append base url to handlers
             handlers = [(tornado.options.options.base + x[0],) + x[1:] for x in handlers]
@@ -38,3 +38,6 @@ class Application(tornado.web.Application):
         self.Session = sessionmaker(bind=self.engine, **sessionmaker_settings)
         # this allows the BaseHandler to get and set a model for self.current_user
         self.user_model = user_model
+
+        # you can set this to override the domain for secure cookies
+        self.domain = domain

@@ -1,4 +1,4 @@
-import os
+ import os
 import tornado.web
 import traceback
 import threading
@@ -104,7 +104,8 @@ class BaseHandler(tornado.web.RequestHandler):
     def current_user(self, value):
         if self.application.user_model is not None and isinstance(value, self.application.user_model):
             value = value.id
-        self.set_secure_cookie('user_id', str(value))
+        self.set_secure_cookie('user_id', str(value), domain=self.application.domain)
+
 
     @property
     def executor(self):
