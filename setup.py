@@ -5,7 +5,7 @@ setup(
     version='0.0.4',
     author='Tristan King',
     author_email='tristan.king@gmail.com',
-    packages=['bbtornado'],
+    packages=['bbtornado', 'bbtornado.alembic'],
     url='http://github.com/bakkenbaeck/bbtornado',
     description='Basic app setup using tornado.',
     long_description=open('README.md').read(),
