@@ -7,7 +7,6 @@ import logging
 from functools import wraps, partial
 
 from concurrent.futures import ThreadPoolExecutor
-from sqlalchemy.orm import scoped_session
 from tornado.escape import json_decode
 from tornado.web import HTTPError
 from tornado.util import ObjectDict
@@ -81,12 +80,12 @@ class BaseHandler(tornado.web.RequestHandler):
     @property
     def db(self):
         if not hasattr(self, '_session'):
-            self._session = scoped_session(self.application.Session)
+            self._session = self.application.Session()
         return self._session
 
     def on_finish(self):
         if hasattr(self, '_session') and self._session:
-            self._session.remove()
+            self.application.Session.remove()
             del self._session
 
     def get_current_user(self):
