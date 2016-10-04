@@ -6,6 +6,7 @@ import tornado.web
 from sqlalchemy.orm import scoped_session
 
 import bbtornado.models
+from bbtornado.handlers import ThreadRequestContext
 
 log = logging.getLogger('bbtornado.web')
 
@@ -38,7 +39,7 @@ class Application(tornado.web.Application):
                                     # set echo to true if debug option is set to 2
                                     echo=tornado.options.options.debug == 2)
         bbtornado.models.init_db(self.engine)
-        self.Session = scoped_session(sessionmaker(bind=self.engine, **sessionmaker_settings))
+        self.Session = scoped_session(sessionmaker(bind=self.engine, **sessionmaker_settings), scopefunc=lambda: ThreadRequestContext.data.request)
         # this allows the BaseHandler to get and set a model for self.current_user
         self.user_model = user_model
 
