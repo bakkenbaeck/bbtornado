@@ -72,9 +72,12 @@ class BaseHandler(tornado.web.RequestHandler):
         """
         Override this to save some data in a StackContact local dict
         """
-        global_data = dict(request=self.request, current_user=self.current_user)
+        global_data = dict(request=self.request)
 
         with tornado.stack_context.StackContext(partial(ThreadRequestContext, **global_data)):
+            # this uses ORM, which needs a DB connection, which needs ThreadRequestContext.data.request
+            # so it must be here.
+            ThreadRequestContext.data.current_user = self.current_user
             return super(BaseHandler, self)._execute(transforms, *args, **kwargs)
 
     @property
