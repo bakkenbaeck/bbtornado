@@ -88,6 +88,9 @@ class BaseHandler(tornado.web.RequestHandler):
             self.application.Session.remove()
             del self._session
 
+    def on_connection_close(self):
+        self.on_finish()
+
     def get_current_user(self):
         user_id = self.get_secure_cookie('user_id')
         try:
