@@ -42,7 +42,7 @@ class Application(tornado.web.Application):
                                     echo=tornado.options.options.debug == 2,
                                     **create_engine_settings)
         bbtornado.models.init_db(self.engine)
-        self.Session = scoped_session(sessionmaker(bind=self.engine, **sessionmaker_settings), scopefunc=lambda: ThreadRequestContext.data.request)
+        self.Session = scoped_session(sessionmaker(bind=self.engine, **sessionmaker_settings), scopefunc=lambda: ThreadRequestContext.data.get('request', None))
         # this allows the BaseHandler to get and set a model for self.current_user
         self.user_model = user_model
 
