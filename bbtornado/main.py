@@ -56,6 +56,9 @@ def shutdown():
     stop_loop()
 
 
+def get_http_server():
+    return http_server
+
 
 def main(app):
 
