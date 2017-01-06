@@ -62,6 +62,7 @@ class BaseModel(object):
         """
 
         fields = { p.key for p in sqlalchemy.orm.object_mapper(self).iterate_properties }
+        fields.update(f for f in self._json_fields_public)
 
         if not private:
             fields.difference_update( self._json_fields_private )
