@@ -21,7 +21,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 class Application(tornado.web.Application):
-    def __init__(self, handlers=None, default_host='', transforms=None, wsgi=False, user_model=None, domain=None,
+    def __init__(self, handlers=None, default_host='', transforms=None, wsgi=False, user_model=None, domain=None, init_db=True,
                  sessionmaker_settings={},
                  create_engine_settings={},
                  **settings):
@@ -41,7 +41,9 @@ class Application(tornado.web.Application):
                                     # set echo to true if debug option is set to 2
                                     echo=tornado.options.options.debug == 2,
                                     **create_engine_settings)
-        bbtornado.models.init_db(self.engine)
+
+        if init_db:
+            bbtornado.models.init_db(self.engine)
         self.Session = scoped_session(sessionmaker(bind=self.engine, **sessionmaker_settings), scopefunc=lambda: ThreadRequestContext.data.get('request', None))
         # this allows the BaseHandler to get and set a model for self.current_user
         self.user_model = user_model
