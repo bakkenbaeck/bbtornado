@@ -34,9 +34,11 @@ class Application(tornado.web.Application):
         super(Application, self).__init__(handlers=handlers, default_host=default_host,
                                           transforms=transforms, wsgi=wsgi, **settings)
 
-        log.info('Using database from %s'%tornado.options.options.db_path)
+        sqlalchemy_database_uri = tornado.options.options.db_path or app_settings.SQLALCHEMY_DATABASE_URI
+
+        log.info('Using database from %s'%sqlalchemy_database_uri)
         # setup database
-        self.engine = create_engine(tornado.options.options.db_path,
+        self.engine = create_engine(sqlalchemy_database_uri,
                                     convert_unicode=True,
                                     # set echo to true if debug option is set to 2
                                     echo=tornado.options.options.debug == 2,

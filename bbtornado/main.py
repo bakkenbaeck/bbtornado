@@ -25,7 +25,7 @@ def setup():
     tornado.options.define("base", default=settings.BASE_URL, type=str)
     tornado.options.define("debug", default=settings.DEBUG, type=int)
     tornado.options.define("fcgi", default=None, type=str)
-    tornado.options.define("db_path", default=settings.SQLALCHEMY_DATABASE_URI, type=str)
+    tornado.options.define("db_path", default=None, type=str)
     return tornado.options.parse_command_line()
 
 MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 3
