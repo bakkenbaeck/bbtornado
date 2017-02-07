@@ -3,6 +3,7 @@ import tornado.web
 import traceback
 import threading
 import logging
+import socket
 
 from functools import wraps, partial
 
@@ -30,6 +31,29 @@ def authenticated(error_code=403, error_message="Not Found"):
         wrapper._needs_authentication = True
         return wrapper
     return decorator
+
+class JsonError(HTTPError):
+    def __init__(self, status_code, message, details=None):
+        HTTPError.__init__(self, status_code, log_message=message, reason=message)
+        self.details = details
+
+class JsonErrorHandler():
+    def write_error(self, code, **args):
+
+        if code == 500:
+            log.error("[%s] 500 error: %s %s %s"%(socket.gethostname(), self.request.method, self.request.uri, self.request.body))
+
+        out = dict(status=code)
+
+        if "exc_info" in args:
+            typ, ex, st = args["exc_info"]
+            if typ in (JsonError, HTTPError) :
+                out['msg'] = ex.log_message
+                if hasattr(ex, 'details') and ex.details: out["details"] = ex.details
+
+        self.write(out)
+        self.finish()
+
 
 
 
