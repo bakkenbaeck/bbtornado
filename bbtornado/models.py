@@ -7,6 +7,8 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
 from sqlalchemy.ext.declarative import declarative_base
 
+import uuid
+
 Base = declarative_base()
 
 def _to_json(o, *args, **kwargs):
@@ -30,6 +32,8 @@ def _to_json(o, *args, **kwargs):
             o = o.isoformat()
     elif isinstance(o, date):
         o = o.isoformat()
+    elif isinstance(o, uuid.UUID):
+        o = o.hex
 
     return o
 
