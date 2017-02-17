@@ -2,6 +2,7 @@ import logging
 import json
 import urllib
 
+from tornado.ioloop import IOLoop
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
 ENDPOINT = 'https://hooks.slack.com/services/xxx'
@@ -64,7 +65,7 @@ class SlackHandler(logging.Handler):
             unfurl_links=False,
             username="Robot",
             channel=self.channel,
-            icon_emoji=icon
+            icon=icon
         )
 
 
