@@ -213,6 +213,7 @@ class FallbackStaticFileHandler(tornado.web.StaticFileHandler):
 
     def write_error(self, status_code=500, **kwargs):
         if status_code == 404:
+            self.set_status(200)
             return self.get(self.filename)
         elif status_code == 403 and 'is not a file' in kwargs['exc_info'][1].log_message:
             return self.get(self.filename)
