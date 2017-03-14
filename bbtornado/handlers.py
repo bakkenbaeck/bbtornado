@@ -216,6 +216,8 @@ class FallbackStaticFileHandler(tornado.web.StaticFileHandler):
             self.set_status(200)
             return self.get(self.filename)
         elif status_code == 403 and 'is not a file' in kwargs['exc_info'][1].log_message:
+            # Check for folders
+            self.set_status(200)
             return self.get(self.filename)
         else:
             tornado.web.StaticFileHandler.write_error(self, status_code, **kwargs)
