@@ -2,6 +2,7 @@ import logging
 import json
 import urllib
 
+
 from tornado.ioloop import IOLoop
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
@@ -72,9 +73,18 @@ class SlackHandler(logging.Handler):
 if __name__ == '__main__':
 
     import sys
-    from tornado.ioloop import IOLoop
+    from optparse import OptionParser
+
+    parser = OptionParser()
+
+    parser.add_option("-c", "--channel", dest="channel", help="channel", default='#test2')
+    parser.add_option("-u", "--username", dest="username", help="username", default='BBTornado')
+    parser.add_option("-i", "--icon", dest="icon", help="icon", default=':robot_face:')
+
+    (options, args) = parser.parse_args()
+
 
     ioloop = IOLoop.instance()
-    ioloop.add_callback(lambda : post_message(sys.argv[1], channel='#test2'))
+    ioloop.add_callback(lambda : post_message(args[0], channel=options.channel, username=options.username, icon=options.icon))
     ioloop.call_later(3, lambda : sys.exit())
     ioloop.start()
