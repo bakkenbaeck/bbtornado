@@ -28,7 +28,7 @@ def setup():
     tornado.options.define("db_path", default=None, type=str)
     return tornado.options.parse_command_line()
 
-MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 3
+MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 0
 
 def sig_handler(sig, frame):
     log.warning('Caught signal: %s', sig)
