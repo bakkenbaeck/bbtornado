@@ -44,7 +44,7 @@ class BaseModel(object):
         return Session.object_session(self)
 
 
-    def _to_json(self, private=False, extra_fields=[]):
+    def _to_json(self, private=False, extra_fields=[], skip_nulls=False):
 
         """
         Render this object as a json dict
@@ -94,7 +94,12 @@ class BaseModel(object):
 
                 rval[k] = _to_json(val,
                                    private=private,
-                                   extra_fields=next_fields )
+                                   extra_fields=next_fields,
+                                   skip_nulls=skip_nulls
+                )
+
+            if skip_nulls and rval[k] is None : del rval[k]
+
         return rval
 
     _json_fields_public = []
