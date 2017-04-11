@@ -6,10 +6,7 @@ import urllib
 from tornado.ioloop import IOLoop
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
-ENDPOINT = 'https://hooks.slack.com/services/xxx'
-CHANNEL = '#notifications'
-
-def post_message(msg, username='BBTornado', channel=CHANNEL, unfurl_links=False, icon=":robot_face:"):
+def post_message(msg, endpoint, channel, username='BBTornado', unfurl_links=False, icon=":robot_face:"):
 
     """
     Post a message on slack.
@@ -24,7 +21,7 @@ def post_message(msg, username='BBTornado', channel=CHANNEL, unfurl_links=False,
                 unfurl_links=unfurl_links,
                 channel=channel)
 
-    req = HTTPRequest(ENDPOINT, method='POST', headers={ 'Content-Type': 'application/json' }, body=json.dumps(body))
+    req = HTTPRequest(endpoint, method='POST', headers={ 'Content-Type': 'application/json' }, body=json.dumps(body))
 
     IOLoop.current().spawn_callback(client.fetch, req)
 
@@ -41,10 +38,11 @@ class SlackFilter(object):
 
 class SlackHandler(logging.Handler):
     """A logging handler that sends error messages to slack"""
-    def __init__(self, slack_endpoint_url, channel, level=logging.ERROR):
+    def __init__(self, slack_endpoint_url, channel, username="BBTornado", level=logging.ERROR):
         logging.Handler.__init__(self)
         self.slack_endpoint = slack_endpoint_url
         self.channel = channel
+        self.username = username
         self.addFilter(SlackFilter(level))
 
     def emit(self, record):
@@ -63,8 +61,9 @@ class SlackHandler(logging.Handler):
 
 
         post_message(msg=text,
+            endpoint=self.slack_endpoint,
             unfurl_links=False,
-            username="Robot",
+            username=self.username,
             channel=self.channel,
             icon=icon
         )
@@ -85,6 +84,6 @@ if __name__ == '__main__':
 
 
     ioloop = IOLoop.instance()
-    ioloop.add_callback(lambda : post_message(args[0], channel=options.channel, username=options.username, icon=options.icon))
+    ioloop.add_callback(lambda : post_message(sys.argv[1], sys.argv[2], channel='#test2'))
     ioloop.call_later(3, lambda : sys.exit())
     ioloop.start()
