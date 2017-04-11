@@ -7,6 +7,8 @@ import tornado.httpserver
 import tornado.options
 import tornado.log
 
+import bbtornado.default_settings
+
 log = logging.getLogger(__name__)
 
 http_server = None
@@ -16,11 +18,11 @@ try:
     if hasattr(settings, 'settings'): settings = settings.settings
 
 except:
-    log.warning("Using bbtornado default settings!")
+    log.warning("Using insecure bbtornado default settings!")
     import bbtornado.default_settings as settings
 
 def setup():
-    tornado.options.define("host", default="0.0.0.0", help="run on the given address", type=str)
+    tornado.options.define("host", default="127.0.0.1", help="run on the given address", type=str)
     tornado.options.define("port", default=5000, help="run on the given port", type=int)
     tornado.options.define("base", default=settings.BASE_URL, type=str)
     tornado.options.define("debug", default=settings.DEBUG, type=int)
@@ -71,6 +73,10 @@ def main(app):
         tornado.log.gen_log.info('HTTP Server started on http://%s:%s/%s',
                                  tornado.options.options.host, tornado.options.options.port,
                                  tornado.options.options.base)
+        if tornado.options.options.debug:
+            tornado.log.gen_log.warning('HTTP Server in debug mode, do not use in production')
+        if settings.SECRET_KEY == bbtornado.default_settings.SECRET_KEY:
+            tornado.log.gen_log.warning('BBTornado configured with insecure default SECRET_KEY, please fix')
 
         signal.signal(signal.SIGTERM, sig_handler)
         signal.signal(signal.SIGINT, sig_handler)
@@ -90,9 +96,14 @@ def main(app):
         wsgi_app = WSGIAdapter(app)
 
         def fcgiapp(env, start):
-            # set the script name to "" so it does not appear in the tonado path match pattern
+            # set the script name to "" so it does not appear in the tornado path match pattern
             env['SCRIPT_NAME'] = ''
             return wsgi_app(env, start)
+
+        if tornado.options.options.debug:
+            tornado.log.gen_log.warning('HTTP Server in debug mode, do not use in production')
+        if settings.SECRET_KEY == bbtornado.default_settings.SECRET_KEY:
+            tornado.log.gen_log.warning('BBTornado configured with insecure default SECRET_KEY, please fix')
 
         from flup.server.fcgi import WSGIServer
         WSGIServer(fcgiapp, bindAddress=tornado.options.options.fcgi).run()

@@ -2,7 +2,7 @@ from os.path import join, dirname, abspath, pardir, expanduser, exists
 import json
 
 SQLALCHEMY_DATABASE_URI = 'sqlite:///%s'%join(dirname(abspath(__file__)), pardir, 'database.db')
-SECRET_KEY = 'something not very random'
+SECRET_KEY = 'REPLACE THIS BY A RANDOM VALUE'
 DEBUG = True
 if exists('../config.json'):
     _config = json.load(open('../config.json', 'r'))
