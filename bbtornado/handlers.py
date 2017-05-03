@@ -183,6 +183,8 @@ class SingleFileHandler(tornado.web.StaticFileHandler):
         return super(SingleFileHandler, self).initialize(path)
     def get(self, *args, **kwargs):
         return super(SingleFileHandler, self).get(self.filename)
+    def head(self, *args, **kwargs):
+        return super(SingleFileHandler, self).get(self.filename)
 
 def json_requires(*fields):
 
