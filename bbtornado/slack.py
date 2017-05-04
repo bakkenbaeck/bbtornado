@@ -82,8 +82,11 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
 
+    if len(args)<2:
+        raise Exception("You need to specify the endpoint and the message!")
 
     ioloop = IOLoop.instance()
-    ioloop.add_callback(lambda : post_message(sys.argv[1], sys.argv[2], channel='#test2'))
+
+    ioloop.add_callback(lambda : post_message(args[0], args[1], channel=options.channel, username=options.username, icon=options.icon))
     ioloop.call_later(3, lambda : sys.exit())
     ioloop.start()
