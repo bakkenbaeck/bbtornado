@@ -12,11 +12,11 @@ from tornado.escape import json_decode
 from tornado.web import HTTPError
 from tornado.util import ObjectDict
 
-
 from six import with_metaclass
 
 
 log = logging.getLogger('bbtornado')
+
 
 def authenticated(error_code=403, error_message="Not Found"):
     """Decorate methods with this to require that the user be logged in.
