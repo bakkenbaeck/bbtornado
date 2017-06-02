@@ -171,7 +171,7 @@ def validate_json(input_schema=None,
                     except NoObjectDefaults:
                         pass
                     else:
-                        deep_update(defaults, self.json_data)
+                        self.json_data = deep_update(defaults, self.json_data)
 
                 try:
                     # Validate the received input
