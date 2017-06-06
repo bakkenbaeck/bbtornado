@@ -124,7 +124,8 @@ def validate_json(input_schema=None,
                   validator_cls=None,
                   format_checker=jsonschema.FormatChecker(),
                   on_empty_404=False,
-                  use_defaults=False):
+                  use_defaults=False,
+                  write_json=True):
     """Parameterized decorator for schema validation
     :type validator_cls: IValidator class
     :type format_checker: jsonschema.FormatChecker or None
@@ -139,6 +140,8 @@ def validate_json(input_schema=None,
             }
         self.body will contains 'published' key with value False if no one
         comes from request, also works with nested schemas.
+    :param write_json: If set to True (default), write a json representation
+                       of the output to the response body
     """
     def _validate(rh_method):
         """Decorator for RequestHandler schema validation
@@ -224,7 +227,7 @@ def validate_json(input_schema=None,
                     #  only see a 500 - Internal Server Error.
                     raise TypeError(str(e))
 
-            if output:
+            if output and write_json:
                 if isinstance(self, JSendMixin):
                     self.success(output._to_json())
                 else:
