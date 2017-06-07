@@ -1,10 +1,25 @@
 import logging
 import json
 import urllib
-
+import six
 
 from tornado.ioloop import IOLoop
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+
+"""
+
+Utilities for logging to slack.
+
+Add a `SlackHandler` to your logger to have messages logged to slack.
+
+>>> import logging
+>>> logging.getLogger().addHandler(SlackHandler('http://my.slack.incoming.webhook', '#bbtornado'))
+
+Messages are either filtered by level, or you can force logging to slack by passing in an extra dict when logging
+
+>>> log.info("hello on slack!", extra=dict(slack='#general'))
+
+"""
 
 def post_message(msg, endpoint, channel, username='BBTornado', unfurl_links=False, icon=":robot_face:"):
 
@@ -59,12 +74,15 @@ class SlackHandler(logging.Handler):
         else: # debug
             icon = ":sparkles:"
 
+        channel = self.channel
+        if hasattr(record, 'slack') and isinstance(record.slack, six.string_types) and record.slack[0] in ('#', '@'):
+            channel = record.slack
 
         post_message(msg=text,
             endpoint=self.slack_endpoint,
             unfurl_links=False,
             username=self.username,
-            channel=self.channel,
+            channel=channel,
             icon=icon
         )
 
