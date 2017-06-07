@@ -7,25 +7,31 @@ import jsonschema
 
 from jsend import JSendMixin
 from handlers import JsonError
+from models import _to_json
 
 
 '''
-Use the @validate_json decorator to
+Use the validate_json utility function to verify a json object or string
+against a given schema. An exception (jsonschema.ValidationError) is
+raised in case of errors.
+
+Use the @validate_json_input decorator to
 - Verify json input (field names, types, required, enums, ...)
 - Checks formats (e.g. email)
-- Optional: Verify json output (raise 500 on error)
-- Optional: Support jsend response format via mixin
 
-Note: The decorator turns the function it wraps into a coroutine!
+Use the @validate_json_output decorator to
+- Verify json output (raise 500 on error)
+- Optional: Support jsend response format via mixin
 
 
 Example:
 
-    @validate_json(
+    @validate_json_input(
         input_schema={
             "$schema": "http://json-schema.org/schema#",
             "title": "Signup",
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "first_name": {
                     "type": "string"
@@ -51,6 +57,9 @@ Example:
         ...
 
 '''
+
+# based on
+# https://github.com/hfaran/Tornado-JSON/blob/master/tornado_json/schema.py
 
 
 class NoObjectDefaults(Exception):
@@ -115,23 +124,47 @@ def deep_update(source, overrides):
     return source
 
 
-# based on
-# https://github.com/hfaran/Tornado-JSON/blob/master/tornado_json/schema.py
-def validate_json(input_schema=None,
-                  output_schema=None,
-                  input_example=None,
-                  output_example=None,
+def validate_json(json_data,
+                  json_schema=None,
+                  json_example=None,
                   validator_cls=None,
                   format_checker=jsonschema.FormatChecker(),
-                  on_empty_404=False,
-                  use_defaults=False,
-                  write_json=True):
-    """Parameterized decorator for schema validation
+                  on_empty_404=False):
+    # if output is empty, auto return the error 404.
+    if not json_data and on_empty_404:
+        raise JsonError(404, "Not found.")
+
+    if json_schema is not None:
+        json_data = _to_json(json_data)
+        # We wrap output in an object before validating in case
+        # output is a string (and ergo not a validatable JSON
+        # object)
+        jsonschema.validate(
+            {
+                "result": json_data
+            },
+            {
+                "type": "object",
+                "properties": {
+                    "result": json_schema
+                },
+                "required": ["result"]
+            },
+            cls=validator_cls,
+            format_checker=format_checker
+        )
+
+    return json_data
+
+
+def validate_json_input(input_schema=None,
+                        input_example=None,
+                        validator_cls=None,
+                        format_checker=jsonschema.FormatChecker(),
+                        use_defaults=True):
+    """Parameterized decorator for input schema validation
     :type validator_cls: IValidator class
     :type format_checker: jsonschema.FormatChecker or None
-    :type on_empty_404: bool
-    :param on_empty_404: If this is set, and the result from the
-        decorated method is a falsy value, a 404 will be raised.
     :type use_defaults: bool
     :param use_defaults: If this is set, will put 'default' keys
         from schema to self.body (If schema type is object). Example:
@@ -140,6 +173,72 @@ def validate_json(input_schema=None,
             }
         self.body will contains 'published' key with value False if no one
         comes from request, also works with nested schemas.
+    """
+    def _validate(rh_method):
+        """Decorator for RequestHandler schema validation
+        This decorator:
+            - Validates request body against input schema of the method
+        :type  rh_method: function
+        :param rh_method: The RequestHandler method to be decorated
+        :returns: The decorated method
+        :raises ValidationError: If input is invalid as per the schema
+            or malformed
+        """
+        @wraps(rh_method)
+        def _wrapper(self, *args, **kwargs):
+            if input_schema is None:
+                # no schema provided => clear input data
+                self.json_data = {}
+            else:
+                # add default values to _input
+                if use_defaults and input_schema.get('type') == 'object':
+                    try:
+                        defaults = get_schema_defaults(input_schema)
+                    except NoObjectDefaults:
+                        pass
+                    else:
+                        self.json_data = deep_update(defaults, self.json_data)
+
+                try:
+                    # Validate the received input
+                    validate_json(
+                        json_data=self.json_data,
+                        json_schema=input_schema,
+                        json_example=input_example,
+                        validator_cls=validator_cls,
+                        format_checker=format_checker,
+                        on_empty_404=False
+                    )
+                except jsonschema.ValidationError as e:
+                    field = '.'.join(e.path)
+                    msg = "%s: %s" % (field, e.message) if field \
+                          else e.message
+                    if isinstance(self, JSendMixin):
+                        self.fail(message=msg,
+                                  field=field)
+                    raise JsonError(400, msg, field)
+            return rh_method(self, *args, **kwargs)
+
+        setattr(_wrapper, "input_schema", input_schema)
+        setattr(_wrapper, "input_example", input_example)
+        return _wrapper
+    return _validate
+
+
+def validate_json_output(output_schema=None,
+                         output_example=None,
+                         validator_cls=None,
+                         format_checker=jsonschema.FormatChecker(),
+                         on_empty_404=False,
+                         write_json=True):
+    print "decorating with validate_json_output..."
+    """Parameterized decorator for schema validation
+    :type validator_cls: IValidator class
+    :type format_checker: jsonschema.FormatChecker or None
+    :type on_empty_404: bool
+    :param on_empty_404: If this is set, and the result from the
+        decorated method is a falsy value, a 404 will be raised.
+    :type use_defaults: bool
     :param write_json: If set to True (default), write a json representation
                        of the output to the response body
     """
@@ -161,84 +260,41 @@ def validate_json(input_schema=None,
             on_empty_404 is True, an HTTP 404 error is returned
         """
         @wraps(rh_method)
-        @coroutine
         def _wrapper(self, *args, **kwargs):
-            # In case the specified input_schema is ``None``, we
-            #   don't json.loads the input, but just set it to ``None``
-            #   instead.
-            if input_schema is not None:
-                # add default values to _input
-                if use_defaults and input_schema.get('type') == 'object':
-                    try:
-                        defaults = get_schema_defaults(input_schema)
-                    except NoObjectDefaults:
-                        pass
-                    else:
-                        self.json_data = deep_update(defaults, self.json_data)
-
-                try:
-                    # Validate the received input
-                    jsonschema.validate(
-                        self.json_data,
-                        input_schema,
-                        cls=validator_cls,
-                        format_checker=format_checker
-                    )
-                except jsonschema.ValidationError as e:
-                    field = '.'.join(e.path)
-                    msg = "%s: %s" % (field, e.message) if field \
-                          else e.message
-                    if isinstance(self, JSendMixin):
-                        self.fail(message=msg,
-                                  field=field)
-                    raise JsonError(400, msg, field)
-            else:
-                self.json_data = {}
-
             # Call the requesthandler method
             output = rh_method(self, *args, **kwargs)
-            # If the rh_method returned a Future a la `raise Return(value)`
-            #   we grab the output.
+
+            def validate_output(output):
+                # in case output is a future, we can be sure it is finished
+                if is_future(output):
+                    output = output.result()
+
+                json_data = validate_json(
+                    json_data=output,
+                    json_schema=output_schema,
+                    json_example=output_example,
+                    validator_cls=validator_cls,
+                    format_checker=format_checker,
+                    on_empty_404=on_empty_404
+                )
+
+                if json_data and write_json:
+                    if isinstance(self, JSendMixin):
+                        self.success(json_data)
+                    else:
+                        self.write(json_data)
+
+            # If the rh_method returned a Future a la `raise Return(value)`, we
+            # don't evaluate it immediately
             if is_future(output):
-                output = yield output
-
-            # if output is empty, auto return the error 404.
-            if not output and on_empty_404:
-                raise JsonError(404, "Not found.")
-
-            if output_schema is not None:
-                # We wrap output in an object before validating in case
-                #  output is a string (and ergo not a validatable JSON object)
-                try:
-                    jsonschema.validate(
-                        {"result": output},
-                        {
-                            "type": "object",
-                            "properties": {
-                                "result": output_schema
-                            },
-                            "required": ["result"]
-                        }
-                    )
-                except jsonschema.ValidationError as e:
-                    # We essentially re-raise this as a TypeError because
-                    #  we don't want this error data passed back to the client
-                    #  because it's a fault on our end. The client should
-                    #  only see a 500 - Internal Server Error.
-                    raise TypeError(str(e))
-
-            if output and write_json:
-                if isinstance(self, JSendMixin):
-                    self.success(output._to_json())
-                else:
-                    self.write(output._to_json())
-
-            raise Return(output)
-
-        setattr(_wrapper, "input_schema", input_schema)
+                output.add_done_callback(validate_output)
+            else:
+                # Validate the obtained output, but don't catch
+                # any exceptions, so that errors result in status
+                # code 500
+                validate_output(output)
+            return output
         setattr(_wrapper, "output_schema", output_schema)
-        setattr(_wrapper, "input_example", input_example)
         setattr(_wrapper, "output_example", output_example)
-
         return _wrapper
     return _validate
