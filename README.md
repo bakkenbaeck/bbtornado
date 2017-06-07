@@ -1,9 +1,15 @@
 [![CircleCI](https://circleci.com/gh/bakkenbaeck/bbtornado/tree/master.svg?style=svg&circle-token=541d1c231d77b2fc0e9ed3091cb30e4cf2378043)](https://circleci.com/gh/bakkenbaeck/bbtornado/tree/master)
 
+A collection of utilities for writing REST backends with Tornado and SQLAlchemy
+
+This is all tailored to work with Bakken & Bæcks internal frameworks, it will not all make sense outside of it.
+
+This code should work for both python 2.7 and 3.6.
+
 ## Example
 
 ```Python
-    
+
 import bbtornado.main
 
 from bbtornado.web import Application

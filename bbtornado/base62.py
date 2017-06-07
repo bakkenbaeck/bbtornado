@@ -1,5 +1,12 @@
 import string
 
+"""
+encode/decode data as base62 strings.
+Base64 typically uses / and + for the extra two chars.
+
+Base62 encoded strings require no further encoding to be used in URLs
+"""
+
 chars = string.digits + string.ascii_letters
 base = len(chars)
 

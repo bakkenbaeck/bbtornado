@@ -22,6 +22,12 @@ except:
     import bbtornado.default_settings as settings
 
 def setup():
+    """
+    setup common commandline options and parse them all
+
+    you must add any of your own options before this
+    """
+
     tornado.options.define("host", default="127.0.0.1", help="run on the given address", type=str)
     tornado.options.define("port", default=5000, help="run on the given port", type=int)
     tornado.options.define("base", default=settings.BASE_URL, type=str)

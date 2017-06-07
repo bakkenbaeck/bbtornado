@@ -21,6 +21,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 class Application(tornado.web.Application):
+
+    """
+    The main Application, your application object is an instance of this class
+    """
+
     def __init__(self, handlers=None, default_host='', transforms=None, wsgi=False, user_model=None, domain=None, init_db=True,
                  sessionmaker_settings={},
                  create_engine_settings={},

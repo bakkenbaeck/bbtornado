@@ -33,11 +33,21 @@ def authenticated(error_code=403, error_message="Not Found"):
     return decorator
 
 class JsonError(HTTPError):
+
+    """
+    Exception to be raised to return errors with JSON body to the client
+    """
+
     def __init__(self, status_code, message, details=None):
         HTTPError.__init__(self, status_code, log_message=message, reason=message)
         self.details = details
 
 class JsonErrorHandler():
+
+    """
+    Mixin to have errored HTTP requests returned with JSON body
+    """
+
     def write_error(self, code, **args):
 
         if code == 500:
@@ -169,6 +179,12 @@ class BaseHandler(tornado.web.RequestHandler):
 
 
 class JSONWriteErrorMixin(object):
+
+    """
+    almost same as JSONErrorHandler above.
+    duplicated for legacy reasons :see_no_evil:
+    """
+
     def write_error(self, status_code, **kwargs):
         rval = dict(code=status_code, message=self._reason)
         # only give exc_info when in debug mode
@@ -178,6 +194,12 @@ class JSONWriteErrorMixin(object):
         self.finish()
 
 class SingleFileHandler(tornado.web.StaticFileHandler):
+
+    """
+    A handler to always return a single file,
+    useful for always returning index.html or similar
+    """
+
     def initialize(self,filename):
         path, self.filename = os.path.split(filename)
         return super(SingleFileHandler, self).initialize(path)
@@ -187,6 +209,12 @@ class SingleFileHandler(tornado.web.StaticFileHandler):
         return super(SingleFileHandler, self).head(self.filename)
 
 def json_requires(*fields):
+    """
+    handler http-method decorator to require a json body with certains fields:
+
+    @json_requires(['name', 'age'])
+    def post(self, ...):
+    """
 
     def wrapper1(func):
         @wraps(func)
@@ -207,6 +235,11 @@ def json_requires(*fields):
 
 
 class FallbackStaticFileHandler(tornado.web.StaticFileHandler):
+
+    """
+    A handler to fall back on a single file when the requested URL isn't found.
+    Useful for Angular/React single page applications.
+    """
 
     def initialize(self, path=None, filename=None):
 

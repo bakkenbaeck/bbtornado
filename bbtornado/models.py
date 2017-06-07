@@ -1,3 +1,9 @@
+"""
+Utilities for SQLAlchemy models.
+
+Mainly code for json serialisation, and protected/private fields that should not be serialised
+"""
+
 import sqlalchemy.orm
 
 from datetime import datetime, date
