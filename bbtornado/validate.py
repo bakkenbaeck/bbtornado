@@ -231,7 +231,6 @@ def validate_json_output(output_schema=None,
                          format_checker=jsonschema.FormatChecker(),
                          on_empty_404=False,
                          write_json=True):
-    print "decorating with validate_json_output..."
     """Parameterized decorator for schema validation
     :type validator_cls: IValidator class
     :type format_checker: jsonschema.FormatChecker or None
@@ -293,7 +292,7 @@ def validate_json_output(output_schema=None,
                 # any exceptions, so that errors result in status
                 # code 500
                 validate_output(output)
-            return output
+
         setattr(_wrapper, "output_schema", output_schema)
         setattr(_wrapper, "output_example", output_example)
         return _wrapper
