@@ -1,5 +1,4 @@
 from tornado.concurrent import is_future
-from tornado.gen import Return, coroutine
 
 from functools import wraps
 import collections
@@ -287,6 +286,7 @@ def validate_json_output(output_schema=None,
             # don't evaluate it immediately
             if is_future(output):
                 output.add_done_callback(validate_output)
+                return output
             else:
                 # Validate the obtained output, but don't catch
                 # any exceptions, so that errors result in status
