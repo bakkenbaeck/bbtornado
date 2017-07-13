@@ -276,7 +276,8 @@ def validate_json_output(output_schema=None,
                     on_empty_404=on_empty_404
                 )
 
-                if json_data and write_json:
+                if json_data and write_json and \
+                   not self._finished:
                     if isinstance(self, JSendMixin):
                         self.success(json_data)
                     else:
