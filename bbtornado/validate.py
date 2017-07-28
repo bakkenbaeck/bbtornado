@@ -4,9 +4,9 @@ from functools import wraps
 import collections
 import jsonschema
 
-from jsend import JSendMixin
-from handlers import JsonError
-from models import _to_json
+from bbtornado.jsend import JSendMixin
+from bbtornado.handlers import JsonError
+from bbtornado.models import _to_json
 
 
 '''
