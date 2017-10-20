@@ -38,7 +38,7 @@ def post_message(msg, endpoint, channel, username='BBTornado', unfurl_links=Fals
 
     req = HTTPRequest(endpoint, method='POST', headers={ 'Content-Type': 'application/json' }, body=json.dumps(body))
 
-    IOLoop.current().spawn_callback(client.fetch, req)
+    IOLoop.current().spawn_callback(client.fetch, req, raise_error=False)
 
 class SlackFilter(object):
 
