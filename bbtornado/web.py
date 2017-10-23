@@ -1,6 +1,5 @@
 import logging
 
-import tornado.options
 import tornado.web
 
 from sqlalchemy.orm import scoped_session
@@ -10,15 +9,10 @@ from bbtornado.handlers import ThreadRequestContext
 
 log = logging.getLogger('bbtornado.web')
 
-try:
-    import settings as app_settings
-    if hasattr(app_settings, 'settings'): app_settings = app_settings.settings
-except:
-    log.warn('No app settings founds, falling back on default settings')
-    import default_settings as app_settings
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 
 class Application(tornado.web.Application):
 
@@ -31,23 +25,28 @@ class Application(tornado.web.Application):
                  create_engine_settings={},
                  **settings):
         if handlers: # append base url to handlers
-            handlers = [(tornado.options.options.base + x[0],) + x[1:] for x in handlers]
-        if 'debug' not in settings:
-            settings['debug'] = tornado.options.options.debug
-        if 'cookie_secret' not in settings:
-            settings['cookie_secret'] = app_settings.SECRET_KEY
+            base = bbtornado.config['tornado']['server']['base']
+            handlers = [(base + x[0],) + x[1:] for x in handlers]
+
+        # Init app settings with config.tornado and add override by passed args.
+        app_settings = {}
+        app_settings.update(bbtornado.config['tornado']['app_settings'])
+        app_settings.update(settings)
         super(Application, self).__init__(handlers=handlers, default_host=default_host,
-                                          transforms=transforms, wsgi=wsgi, **settings)
+                                          transforms=transforms, wsgi=wsgi, **app_settings)
 
-        sqlalchemy_database_uri = tornado.options.options.db_path or app_settings.SQLALCHEMY_DATABASE_URI
-
-        log.info('Using database from %s'%sqlalchemy_database_uri)
-        # setup database
-        self.engine = create_engine(sqlalchemy_database_uri,
+        # Init engine settings with config.db and add overrider by passed args.
+        _create_engine_settings = {}
+        _create_engine_settings.update(bbtornado.config['db'])
+        _create_engine_settings.update(create_engine_settings)
+        # Handle db_uri explicitely
+        db_uri = bbtornado.config['db']['uri']
+        _create_engine_settings.pop('uri', None)
+        # setup database engine
+        log.info('Using database from %s'%db_uri)
+        self.engine = create_engine(db_uri,
                                     convert_unicode=True,
-                                    # set echo to true if debug option is set to 2
-                                    echo=tornado.options.options.debug == 2,
-                                    **create_engine_settings)
+                                    **_create_engine_settings)
 
         if init_db:
             bbtornado.models.init_db(self.engine)
