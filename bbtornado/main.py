@@ -14,6 +14,9 @@ log = logging.getLogger(__name__)
 
 http_server = None
 
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 5000
+DEFAULT_BASE = ""
 
 def setup():
     """
@@ -21,7 +24,12 @@ def setup():
 
     you must add any of your own options before this
     """
+    tornado.options.define("host", default=None, help="run on the given address", type=str)
+    tornado.options.define("port", default=None, help="run on the given port", type=int)
+    tornado.options.define("base", default=None, type=str)
+    tornado.options.define("debug", default=None, type=int)
     tornado.options.define("fcgi", default=None, type=str)
+    tornado.options.define("db_path", default=None, type=str)
 
     tornado.options.define("config", default=None, help='Config file', type=str)
     not_parsed = tornado.options.parse_command_line()
@@ -32,14 +40,58 @@ def setup():
     return not_parsed
 
 
+
+def find_first(array):
+    return next(item for item in array if item is not None)
+
+def override_config(config=None):
+    '''Overrides the given config by tornado.options'''
+    override = tornado.options.options
+
+    # Init config object
+    if 'tornado' not in config:
+        config['tornado'] = {}
+    if config['tornado'].get('server') is None:
+        config['tornado']['server'] = {}
+    if config['tornado'].get('app_settings') is None:
+        config['tornado']['app_settings'] = {}
+    if 'db' not in config:
+        config['db'] = {}
+
+
+    # Handle host, port, base, with the following priorities
+    # 1. command line arg (by tornado.options)
+    # 2. config file
+    # 3. hardcoded default
+    server_cfg = config['tornado']['server']
+    host = find_first([override.host, server_cfg.get('host'), DEFAULT_HOST])
+    port = find_first([override.port, server_cfg.get('port'), DEFAULT_PORT])
+    base = find_first([override.base, server_cfg.get('base'), DEFAULT_BASE])
+    config['tornado']['server'].update(dict(host=host, port=port, base=base))
+
+    # If the debug flag is set, save it in app_settings and activate db echo
+    if override.debug is not None:
+        config['tornado']['app_settings']['debug'] = override.debug
+        config['db']['echo'] = override.debug == 2
+
+    if override.db_path is not None:
+        config['db']['uri'] = override.db_path
+
+    return config
+
+
+
 def setup_global_config():
     '''Reads the config file from the command line arguemnt --config and installs
     it globally as `bbtornado.config`.'''
     config_path = tornado.options.options.config
-    if config_path is None:
-        raise Exception('Missing command line argument --config CONFIG_YAML')
+    if config_path is not None:
+        config = read_config(config_path)
+    else:
+        config = {}
+    override_config(config)
 
-    config = read_config(config_path)
+    validate_config(config)
 
     # Update global config object
     le_config.update(config)
@@ -49,7 +101,6 @@ def read_config(config_path):
     '''Reads the config yaml.'''
     try:
         config = parse_config(config_path)
-        validate_config(config)
     except Exception as e:
         raise Exception('Failed loading config %s' % config_path, e)
     return config
