@@ -81,7 +81,6 @@ def override_config(config):
     # Set up default database uri if it is not given
     db_uri = find_first([override.db_path, config['db'].get('uri'), DEFAULT_DEV_DB_URI])
     config['db']['uri'] = db_uri
-    print('DBURI', db_uri)
 
     # Set up default cookie secret if it is not given
     cookie_secret = config['tornado']['app_settings'].get('cookie_secret')
