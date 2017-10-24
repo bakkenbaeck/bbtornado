@@ -18,6 +18,8 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
 DEFAULT_BASE = ""
 
+DEFAULT_COOKIE_SECRET = 'Do not use in production'
+
 def setup():
     """
     setup common commandline options and parse them all
@@ -78,6 +80,10 @@ def override_config(config):
         config['db']['uri'] = override.db_path
 
 
+    # Set up default cookie secret if it is not given
+    cookie_secret = config['tornado']['app_settings'].get('cookie_secret')
+    cookie_secret = find_first([cookie_secret, DEFAULT_COOKIE_SECRET])
+    config['tornado']['app_settings']['cookie_secret'] = cookie_secret
 
 
 def setup_global_config():
@@ -132,8 +138,8 @@ def validate_config(config):
     if config['tornado']['app_settings'].get('debug'):
         tornado.log.gen_log.warning('HTTP Server in debug mode, do not use in production.')
     cookie_secret = config['tornado']['app_settings'].get('cookie_secret')
-    if cookie_secret is None:
-        raise Exception('Missing object tornado.app_settings.cookie_secret')
+    if not cookie_secret or cookie_secret == DEFAULT_COOKIE_SECRET:
+        tornado.log.gen_log.warning('Insecure default cookie secret, do not use in production.')
 
     # Validate database settings
     if not config.get('db'):
