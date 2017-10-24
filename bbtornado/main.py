@@ -2,6 +2,7 @@ import logging
 import time
 import signal
 import yaml
+from os.path import abspath, join, pardir
 
 import tornado.ioloop
 import tornado.httpserver
@@ -17,8 +18,9 @@ http_server = None
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
 DEFAULT_BASE = ""
-
+DEFAULT_DEV_DB_URI = 'sqlite:///%s'%join(pardir, 'development.db')
 DEFAULT_COOKIE_SECRET = 'Do not use in production'
+
 
 def setup():
     """
@@ -76,9 +78,10 @@ def override_config(config):
         config['tornado']['app_settings']['debug'] = override.debug
         config['db']['echo'] = override.debug == 2
 
-    if override.db_path is not None:
-        config['db']['uri'] = override.db_path
-
+    # Set up default database uri if it is not given
+    db_uri = find_first([override.db_path, config['db'].get('uri'), DEFAULT_DEV_DB_URI])
+    config['db']['uri'] = db_uri
+    print('DBURI', db_uri)
 
     # Set up default cookie secret if it is not given
     cookie_secret = config['tornado']['app_settings'].get('cookie_secret')
@@ -146,6 +149,8 @@ def validate_config(config):
         raise Exception('Missing object db')
     if not config['db'].get('uri'):
         raise Exception('Missing object db.uri')
+    if config['db']['uri'] == DEFAULT_DEV_DB_URI:
+        tornado.log.gen_log.warning('Development DB, do not use in production.')
     if config['db'].get('echo'):
         tornado.log.gen_log.warning('DB in echo mode, do not use in production.')
     return True
