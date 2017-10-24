@@ -40,11 +40,11 @@ def setup():
     return not_parsed
 
 
-
 def find_first(array):
     return next(item for item in array if item is not None)
 
-def override_config(config=None):
+
+def override_config(config):
     '''Overrides the given config by tornado.options'''
     override = tornado.options.options
 
@@ -77,7 +77,6 @@ def override_config(config=None):
     if override.db_path is not None:
         config['db']['uri'] = override.db_path
 
-    return config
 
 
 
@@ -128,7 +127,7 @@ def validate_config(config):
         raise Exception('Missing object tornado.server.port')
     if config['tornado']['server'].get('base') is None:
         raise Exception('Missing object tornado.server.base')
-    if not config['tornado'].get('app_settings'):
+    if config['tornado'].get('app_settings') is None:
         raise Exception('Missing object tornado.app_settings')
     if config['tornado']['app_settings'].get('debug'):
         tornado.log.gen_log.warning('HTTP Server in debug mode, do not use in production.')
