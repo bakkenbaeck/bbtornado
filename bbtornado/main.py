@@ -8,6 +8,7 @@ import tornado.ioloop
 import tornado.httpserver
 import tornado.options
 import tornado.log
+from tornado.util import ObjectDict
 from bbtornado import config as le_config
 
 
@@ -101,7 +102,19 @@ def setup_global_config():
     validate_config(config)
 
     # Update global config object
-    le_config.update(config)
+    deep_copy(le_config, config)
+
+
+def deep_copy(obj_cfg, src_dict):
+    for key in src_dict.keys():
+        val = src_dict[key]
+        if isinstance(val, dict):
+            new_val = ObjectDict()
+            deep_copy(new_val, val)
+        else:
+            new_val = val
+        obj_cfg[key] = new_val
+
 
 
 def read_config(config_path):
@@ -195,10 +208,10 @@ def main(app):
 
         http_server = tornado.httpserver.HTTPServer(app)
 
-        server_opts = le_config['tornado']['server']
-        host = server_opts['host']
-        port = server_opts['port']
-        base = server_opts['base']
+        server_opts = le_config.tornado.server
+        host = server_opts.host
+        port = server_opts.port
+        base = server_opts.base
         http_server.listen(port, address=host)
         tornado.log.gen_log.info('HTTP Server started on http://%s:%s/%s',
                                  host, port, base)

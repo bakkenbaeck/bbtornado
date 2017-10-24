@@ -24,23 +24,24 @@ class Application(tornado.web.Application):
                  sessionmaker_settings={},
                  create_engine_settings={},
                  **settings):
+        tornado_opts = bbtornado.config.tornado
         if handlers: # append base url to handlers
-            base = bbtornado.config['tornado']['server']['base']
+            base = tornado_opts.server.base
             handlers = [(base + x[0],) + x[1:] for x in handlers]
 
         # Init app settings with config.tornado and add override by passed args.
         app_settings = {}
-        app_settings.update(bbtornado.config['tornado']['app_settings'])
+        app_settings.update(tornado_opts.app_settings)
         app_settings.update(settings)
         super(Application, self).__init__(handlers=handlers, default_host=default_host,
                                           transforms=transforms, wsgi=wsgi, **app_settings)
 
         # Init engine settings with config.db and add overrider by passed args.
         _create_engine_settings = {}
-        _create_engine_settings.update(bbtornado.config['db'])
+        _create_engine_settings.update(bbtornado.config.db)
         _create_engine_settings.update(create_engine_settings)
         # Handle db_uri explicitely
-        db_uri = bbtornado.config['db']['uri']
+        db_uri = bbtornado.config.db.uri
         _create_engine_settings.pop('uri', None)
         # setup database engine
         log.info('Using database from %s'%db_uri)
