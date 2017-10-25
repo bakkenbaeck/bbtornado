@@ -1,0 +1,12 @@
+tornado:
+  server:
+    host: 127.0.0.1
+    port: 5000
+    base: ''
+  app_settings:
+    cookie_secret: super random secret
+    debug: 0
+
+db:
+  uri: sqlite:///../development.db
+  echo: False

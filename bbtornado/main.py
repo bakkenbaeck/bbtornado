@@ -1,25 +1,27 @@
 import logging
 import time
 import signal
+import yaml
+from os.path import abspath, join, pardir
 
 import tornado.ioloop
 import tornado.httpserver
 import tornado.options
 import tornado.log
+from tornado.util import ObjectDict
+from bbtornado import config as le_config
 
-import bbtornado.default_settings
 
 log = logging.getLogger(__name__)
 
 http_server = None
 
-try:
-    import settings
-    if hasattr(settings, 'settings'): settings = settings.settings
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 5000
+DEFAULT_BASE = ""
+DEFAULT_DEV_DB_URI = 'sqlite:///%s'%join(pardir, 'development.db')
+DEFAULT_COOKIE_SECRET = 'Do not use in production'
 
-except:
-    log.warning("Using insecure bbtornado default settings!")
-    import bbtornado.default_settings as settings
 
 def setup():
     """
@@ -27,14 +29,144 @@ def setup():
 
     you must add any of your own options before this
     """
-
-    tornado.options.define("host", default="127.0.0.1", help="run on the given address", type=str)
-    tornado.options.define("port", default=5000, help="run on the given port", type=int)
-    tornado.options.define("base", default=settings.BASE_URL, type=str)
-    tornado.options.define("debug", default=settings.DEBUG, type=int)
+    tornado.options.define("host", default=None, help="run on the given address", type=str)
+    tornado.options.define("port", default=None, help="run on the given port", type=int)
+    tornado.options.define("base", default=None, type=str)
+    tornado.options.define("debug", default=None, type=int)
     tornado.options.define("fcgi", default=None, type=str)
     tornado.options.define("db_path", default=None, type=str)
-    return tornado.options.parse_command_line()
+
+    tornado.options.define("config", default=None, help='Config file', type=str)
+    not_parsed = tornado.options.parse_command_line()
+
+
+    setup_global_config()
+
+    return not_parsed
+
+
+def find_first(array):
+    return next(item for item in array if item is not None)
+
+
+def override_config(config):
+    '''Overrides the given config by tornado.options'''
+    override = tornado.options.options
+
+    # Init config object
+    if 'tornado' not in config:
+        config['tornado'] = {}
+    if config['tornado'].get('server') is None:
+        config['tornado']['server'] = {}
+    if config['tornado'].get('app_settings') is None:
+        config['tornado']['app_settings'] = {}
+    if 'db' not in config:
+        config['db'] = {}
+
+
+    # Handle host, port, base, with the following priorities
+    # 1. command line arg (by tornado.options)
+    # 2. config file
+    # 3. hardcoded default
+    server_cfg = config['tornado']['server']
+    host = find_first([override.host, server_cfg.get('host'), DEFAULT_HOST])
+    port = find_first([override.port, server_cfg.get('port'), DEFAULT_PORT])
+    base = find_first([override.base, server_cfg.get('base'), DEFAULT_BASE])
+    config['tornado']['server'].update(dict(host=host, port=port, base=base))
+
+    # If the debug flag is set, save it in app_settings and activate db echo
+    if override.debug is not None:
+        config['tornado']['app_settings']['debug'] = override.debug
+        config['db']['echo'] = override.debug == 2
+
+    # Set up default database uri if it is not given
+    db_uri = find_first([override.db_path, config['db'].get('uri'), DEFAULT_DEV_DB_URI])
+    config['db']['uri'] = db_uri
+
+    # Set up default cookie secret if it is not given
+    cookie_secret = config['tornado']['app_settings'].get('cookie_secret')
+    cookie_secret = find_first([cookie_secret, DEFAULT_COOKIE_SECRET])
+    config['tornado']['app_settings']['cookie_secret'] = cookie_secret
+
+
+def setup_global_config():
+    '''Reads the config file from the command line arguemnt --config and installs
+    it globally as `bbtornado.config`.'''
+    config_path = tornado.options.options.config
+    if config_path is not None:
+        config = read_config(config_path)
+    else:
+        config = {}
+    override_config(config)
+
+    validate_config(config)
+
+    # Update global config object
+    deep_copy(le_config, config)
+
+
+def deep_copy(obj_cfg, src_dict):
+    for key in src_dict.keys():
+        val = src_dict[key]
+        if isinstance(val, dict):
+            new_val = ObjectDict()
+            deep_copy(new_val, val)
+        else:
+            new_val = val
+        obj_cfg[key] = new_val
+
+
+
+def read_config(config_path):
+    '''Reads the config yaml.'''
+    try:
+        config = parse_config(config_path)
+    except Exception as e:
+        raise Exception('Failed loading config %s' % config_path, e)
+    return config
+
+
+def parse_config(config_yaml_path):
+    '''Parses the config yaml file'''
+    with open(config_yaml_path, 'r') as fd:
+        config = yaml.load(fd)
+    return config
+
+
+def validate_config(config):
+    if config is None:
+        raise Exception('Config is empty')
+
+    # Validate tornado settings
+    if not config.get('tornado'):
+        raise Exception('Missing object tornado')
+    if not config['tornado'].get('server'):
+        raise Exception('Missing object tornado.server')
+    if not config['tornado']['server'].get('host'):
+        raise Exception('Missing object tornado.server.host')
+    if config['tornado']['server'].get('port') is None:
+        raise Exception('Missing object tornado.server.port')
+    if config['tornado']['server'].get('base') is None:
+        raise Exception('Missing object tornado.server.base')
+    if config['tornado'].get('app_settings') is None:
+        raise Exception('Missing object tornado.app_settings')
+    if config['tornado']['app_settings'].get('debug'):
+        tornado.log.gen_log.warning('HTTP Server in debug mode, do not use in production.')
+    cookie_secret = config['tornado']['app_settings'].get('cookie_secret')
+    if not cookie_secret or cookie_secret == DEFAULT_COOKIE_SECRET:
+        tornado.log.gen_log.warning('Insecure default cookie secret, do not use in production.')
+
+    # Validate database settings
+    if not config.get('db'):
+        raise Exception('Missing object db')
+    if not config['db'].get('uri'):
+        raise Exception('Missing object db.uri')
+    if config['db']['uri'] == DEFAULT_DEV_DB_URI:
+        tornado.log.gen_log.warning('Development DB, do not use in production.')
+    if config['db'].get('echo'):
+        tornado.log.gen_log.warning('DB in echo mode, do not use in production.')
+    return True
+
 
 MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 0
 
@@ -75,14 +207,14 @@ def main(app):
     if not tornado.options.options.fcgi:
 
         http_server = tornado.httpserver.HTTPServer(app)
-        http_server.listen(tornado.options.options.port, address=tornado.options.options.host)
+
+        server_opts = le_config.tornado.server
+        host = server_opts.host
+        port = server_opts.port
+        base = server_opts.base
+        http_server.listen(port, address=host)
         tornado.log.gen_log.info('HTTP Server started on http://%s:%s/%s',
-                                 tornado.options.options.host, tornado.options.options.port,
-                                 tornado.options.options.base)
-        if tornado.options.options.debug:
-            tornado.log.gen_log.warning('HTTP Server in debug mode, do not use in production')
-        if settings.SECRET_KEY == bbtornado.default_settings.SECRET_KEY:
-            tornado.log.gen_log.warning('BBTornado configured with insecure default SECRET_KEY, please fix')
+                                 host, port, base)
 
         signal.signal(signal.SIGTERM, sig_handler)
         signal.signal(signal.SIGINT, sig_handler)
@@ -105,11 +237,6 @@ def main(app):
             # set the script name to "" so it does not appear in the tornado path match pattern
             env['SCRIPT_NAME'] = ''
             return wsgi_app(env, start)
-
-        if tornado.options.options.debug:
-            tornado.log.gen_log.warning('HTTP Server in debug mode, do not use in production')
-        if settings.SECRET_KEY == bbtornado.default_settings.SECRET_KEY:
-            tornado.log.gen_log.warning('BBTornado configured with insecure default SECRET_KEY, please fix')
 
         from flup.server.fcgi import WSGIServer
         WSGIServer(fcgiapp, bindAddress=tornado.options.options.fcgi).run()
