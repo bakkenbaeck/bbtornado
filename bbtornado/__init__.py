@@ -5,3 +5,4 @@ from tornado.util import ObjectDict
 # Global config dict
 config = ObjectDict()
 
+
