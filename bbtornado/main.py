@@ -35,12 +35,17 @@ def setup():
     tornado.options.define("debug", default=None, type=int)
     tornado.options.define("fcgi", default=None, type=str)
     tornado.options.define("db_path", default=None, type=str)
-
     tornado.options.define("config", default=None, help='Config file', type=str)
     not_parsed = tornado.options.parse_command_line()
 
-
-    setup_global_config()
+    opts = tornado.options.options
+    setup_global_config(host=opts.host,
+                        port=opts.port,
+                        base=opts.base,
+                        debug=opts.debug,
+                        fcgi=opts.fcgi,
+                        db_path=opts.db_path,
+                        config=opts.config)
 
     return not_parsed
 
@@ -49,9 +54,8 @@ def find_first(array):
     return next(item for item in array if item is not None)
 
 
-def override_config(config):
+def override_config(config, override):
     '''Overrides the given config by tornado.options'''
-    override = tornado.options.options
 
     # Init config object
     if 'tornado' not in config:
@@ -69,18 +73,18 @@ def override_config(config):
     # 2. config file
     # 3. hardcoded default
     server_cfg = config['tornado']['server']
-    host = find_first([override.host, server_cfg.get('host'), DEFAULT_HOST])
-    port = find_first([override.port, server_cfg.get('port'), DEFAULT_PORT])
-    base = find_first([override.base, server_cfg.get('base'), DEFAULT_BASE])
+    host = find_first([override.get('host'), server_cfg.get('host'), DEFAULT_HOST])
+    port = find_first([override.get('port'), server_cfg.get('port'), DEFAULT_PORT])
+    base = find_first([override.get('base'), server_cfg.get('base'), DEFAULT_BASE])
     config['tornado']['server'].update(dict(host=host, port=port, base=base))
 
     # If the debug flag is set, save it in app_settings and activate db echo
-    if override.debug is not None:
-        config['tornado']['app_settings']['debug'] = override.debug
-        config['db']['echo'] = override.debug == 2
+    if override.get('debug') is not None:
+        config['tornado']['app_settings']['debug'] = override.get('debug')
+        config['db']['echo'] = override.get('debug') == 2
 
     # Set up default database uri if it is not given
-    db_uri = find_first([override.db_path, config['db'].get('uri'), DEFAULT_DEV_DB_URI])
+    db_uri = find_first([override.get('db_path'), config['db'].get('uri'), DEFAULT_DEV_DB_URI])
     config['db']['uri'] = db_uri
 
     # Set up default cookie secret if it is not given
@@ -89,15 +93,15 @@ def override_config(config):
     config['tornado']['app_settings']['cookie_secret'] = cookie_secret
 
 
-def setup_global_config():
-    '''Reads the config file from the command line arguemnt --config and installs
-    it globally as `bbtornado.config`.'''
-    config_path = tornado.options.options.config
+def setup_global_config(**kwargs):
+    '''Reads the yaml config file and installs it globally as 
+    `bbtornado.config`.'''
+    config_path = kwargs.pop('config', None)
     if config_path is not None:
         config = read_config(config_path)
     else:
         config = {}
-    override_config(config)
+    override_config(config, kwargs)
 
     validate_config(config)
 
