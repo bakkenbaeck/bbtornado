@@ -14,8 +14,21 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.ext.declarative import declarative_base
 
 import uuid
+import json
+
 
 Base = declarative_base()
+
+class RestJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if hasattr(o, '_to_json'):
+            return o._to_json()
+        if isinstance(o, Decimal): return float(o)
+        if isinstance(o, (datetime, date)): return o.isoformat()
+        return json.JSONEncoder.default(self, o)
+
+def register_json_decoder():
+    json._default_encoder = RestJSONEncoder()
 
 def _to_json(o, *args, **kwargs):
     if isinstance(o, dict):
