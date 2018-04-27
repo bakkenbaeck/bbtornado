@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from tornado.escape import json_decode
 from tornado.web import HTTPError
 from tornado.util import ObjectDict
+from tornado.gen import coroutine, Return
 
 from six import with_metaclass
 
@@ -246,13 +247,11 @@ class FallbackStaticFileHandler(tornado.web.StaticFileHandler):
         self.filename = filename
         return tornado.web.StaticFileHandler.initialize(self, path=path)
 
-    def write_error(self, status_code=500, **kwargs):
-        if status_code == 404:
-            self.set_status(200)
-            return self.get(self.filename)
-        elif status_code == 403 and 'is not a file' in kwargs['exc_info'][1].log_message:
-            # Check for folders
-            self.set_status(200)
-            return self.get(self.filename)
-        else:
-            tornado.web.StaticFileHandler.write_error(self, status_code, **kwargs)
+    @coroutine
+    def get(self, *args, **kwargs):
+        try:
+            raise Return(( yield super(FallbackStaticFileHandler, self).get(*args, **kwargs) ))
+        except HTTPError as e:
+            print(e, e.status_code, e.status_code == 404)
+            if e.status_code != 404: raise e
+            raise Return(( yield super(FallbackStaticFileHandler, self).get(self.filename) ))
