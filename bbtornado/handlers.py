@@ -252,6 +252,9 @@ class FallbackStaticFileHandler(tornado.web.StaticFileHandler):
         try:
             raise Return(( yield super(FallbackStaticFileHandler, self).get(*args, **kwargs) ))
         except HTTPError as e:
-            print(e, e.status_code, e.status_code == 404)
-            if e.status_code != 404: raise e
-            raise Return(( yield super(FallbackStaticFileHandler, self).get(self.filename) ))
+            if e.status_code == 404:
+                raise Return(( yield super(FallbackStaticFileHandler, self).get(self.filename) ))
+            elif e.status_code == 403 and 'is not a file' in e.log_message:
+                raise Return(( yield super(FallbackStaticFileHandler, self).get(self.filename) ))
+            else:
+                raise e
