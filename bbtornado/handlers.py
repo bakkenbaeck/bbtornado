@@ -161,9 +161,9 @@ class BaseHandler(tornado.web.RequestHandler):
             try:
                 json_data = json_decode(self.request.body)
             except ValueError:
-                raise tornado.web.HTTPError(500, "Invalid JSON structure.", reason="Invalid JSON structure.")
+                raise tornado.web.HTTPError(400, "Invalid JSON structure.", reason="Invalid JSON structure.")
             if type(json_data) != dict:
-                raise tornado.web.HTTPError(500, "We only accept key value objects!", reason="We only accept key value objects!")
+                raise tornado.web.HTTPError(400, "We only accept key value objects!", reason="We only accept key value objects!")
             self.json_data = json_data
 
     def _get_arguments(self, name, source, strip=True):
