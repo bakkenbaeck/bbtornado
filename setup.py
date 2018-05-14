@@ -31,8 +31,9 @@ setup(
     url='http://github.com/bakkenbaeck/bbtornado',
     description='Basic app setup using tornado.',
     long_description=open('README.md').read(),
-    install_requires=['tornado', 'futures', 'sqlalchemy', 'six', 'python-dateutil', 'PyYAML'],
+    install_requires=['tornado', 'sqlalchemy', 'six', 'python-dateutil', 'PyYAML'],
     extras_require={
+        ':python_version == "2.7"': ['futures'],
         'jsonschema': ['jsonschema']
     }
 )
