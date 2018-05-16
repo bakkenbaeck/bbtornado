@@ -63,7 +63,8 @@ class SlackHandler(logging.Handler):
     def emit(self, record):
         text = self.format(record)
 
-        if len(text)>300: text=text[:300]+'(...)'
+        # make sure to include the last (most relevant) lines in a stracktrace, too
+        if len(text)>550: text=text[:250]+" (...)\n(...) "+text[-250:]
 
         if record.levelno >= logging.ERROR: # error or critical
             icon = ":heavy_exclamation_mark:"
